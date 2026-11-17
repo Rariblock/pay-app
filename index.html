@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#e93845">
+<title>Pay - デモ決済アプリ</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f5f6f8;color:#222;font-family:Arial,sans-serif}
+header{background:#e93845;color:white;padding:20px 18px;font-size:25px;font-weight:bold}
+main{max-width:600px;margin:auto;padding:18px;padding-bottom:100px}
+.card{background:white;border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 3px 12px #0000000b}
+.balance{background:linear-gradient(135deg,#f04450,#cf2638);color:white}
+.small{font-size:13px;opacity:.8}
+.money{font-size:34px;font-weight:bold;margin:12px 0}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.action{border:0;background:#fff4f4;color:#dc3545;border-radius:13px;padding:17px 5px;font-size:14px;font-weight:bold}
+button{cursor:pointer}
+button:active{opacity:.7}
+h2{font-size:18px;margin:0 0 16px}
+input{width:100%;padding:14px;border:1px solid #ddd;border-radius:10px;font-size:16px;margin:8px 0 15px}
+.primary{width:100%;padding:15px;background:#e93845;color:white;border:0;border-radius:12px;font-size:16px;font-weight:bold}
+.secondary{background:#eee;color:#333;border:0;border-radius:10px;padding:12px}
+.item{display:flex;justify-content:space-between;gap:12px;padding:15px 0;border-bottom:1px solid #eee;font-size:14px}
+.item span:first-child{overflow-wrap:anywhere}
+.plus{color:#14965b;font-weight:bold;white-space:nowrap}
+.minus{color:#e93845;font-weight:bold;white-space:nowrap}
+nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:12px 3px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -3px 15px #00000010}
+nav button{border:0;background:none;color:#777;font-size:12px}
+nav button.active{color:#e93845;font-weight:bold}
+.page{display:none}
+.page.active{display:block}
+.note{font-size:12px;color:#777;line-height:1.6}
+</style>
+</head>
+<body>
+<header>Pay</header>
+<main>
+<section id="home" class="page active">
+<div class="card balance">
+<div class="small">あなたのデモ残高</div>
+<div class="money" id="balance">¥100,000</div>
+<div class="small">これは架空のお金です</div>
+</div>
+<div class="actions">
+<button class="action" onclick="show('charge')">＋<br>チャージ</button>
+<button class="action" onclick="show('send')">➤<br>送金</button>
+<button class="action" onclick="show('pay')">▣<br>支払い</button>
+</div>
+<div class="card" style="margin-top:18px">
+<h2>最近の取引</h2>
+<div id="recent"></div>
+</div>
+<div class="card">
+<h2>Payについて</h2>
+<p class="note">Payは架空のお金で操作を体験できるデモアプリです。実際の決済・送金・換金はできません。</p>
+</div>
+</section>
+
+<section id="charge" class="page">
+<div class="card">
+<h2>デモチャージ</h2>
+<label for="chargeAmount">チャージ金額（円）</label>
+<input id="chargeAmount" type="number" min="1" max="1000000" inputmode="numeric" placeholder="例：5000">
+<button class="primary" onclick="charge()">チャージする</button>
+</div>
+</section>
+
+<section id="send" class="page">
+<div class="card">
+<h2>デモ送金</h2>
+<label for="recipient">相手の名前</label>
+<input id="recipient" maxlength="30" placeholder="例：テストユーザー">
+<label for="sendAmount">送金金額（円）</label>
+<input id="sendAmount" type="number" min="1" max="1000000" inputmode="numeric" placeholder="例：1000">
+<button class="primary" onclick="sendMoney()">送金する</button>
+<p class="note">この送金は自分の画面内だけで行うシミュレーションです。他のユーザーには届きません。</p>
+</div>
+</section>
+
+<section id="pay" class="page">
+<div class="card">
+<h2>デモ支払い</h2>
+<label for="shop">お店の名前</label>
+<input id="shop" maxlength="30" placeholder="例：テストショップ">
+<label for="payAmount">支払い金額（円）</label>
+<input id="payAmount" type="number" min="1" max="1000000" inputmode="numeric" placeholder="例：1200">
+<button class="primary" onclick="payMoney()">支払いを確定する</button>
+<p class="note">実際のお店への支払いではありません。</p>
+</div>
+</section>
+
+<section id="history" class="page">
+<div class="card">
+<h2>取引履歴</h2>
+<div id="historyList"></div>
+</div>
+</section>
+
+<section id="profile" class="page">
+<div class="card">
+<h2>マイページ</h2>
+<p>アカウント名：デモユーザー</p>
+<p>アカウントID：PAY-DEMO-001</p>
+<p class="note">データは現在のブラウザ内に保存されます。このデモにはログイン機能やサーバー同期はありません。</p>
+<button class="secondary" onclick="resetDemo()">デモデータを初期化</button>
+</div>
+</section>
+</main>
+
+<nav aria-label="メインメニュー">
+<button class="active" data-page="home" onclick="show('home')">⌂<br>ホーム</button>
+<button data-page="charge" onclick="show('charge')">＋<br>チャージ</button>
+<button data-page="send" onclick="show('send')">➤<br>送金</button>
+<button data-page="history" onclick="show('history')">▤<br>履歴</button>
+<button data-page="profile" onclick="show('profile')">●<br>マイページ</button>
+</nav>
+
+<script>
+const KEY='pay_demo_v1';
+let state;
+
+function load(){
+ try{state=JSON.parse(localStorage.getItem(KEY));}catch(e){state=null;}
+ if(!state || !Number.isSafeInteger(state.balance) || !Array.isArray(state.history)){
+  state={balance:100000,history:[]};
+  save();
+ }
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(state));}
+function yen(n){return '¥'+n.toLocaleString('ja-JP');}
+function amount(id){
+ const n=Number(document.getElementById(id).value);
+ if(!Number.isSafeInteger(n)||n<=0||n>1000000){
+  alert('1円〜1,000,000円で入力してください');
+  return null;
+ }
+ return n;
+}
+function record(title,value){
+ state.history.unshift({title:title,amount:value,date:new Date().toLocaleString('ja-JP')});
+ state.history=state.history.slice(0,100);
+ save();render();
+}
+function charge(){
+ const n=amount('chargeAmount');if(n===null)return;
+ if(state.balance+n>100000000){alert('残高の上限を超えます');return;}
+ state.balance+=n;record('デモチャージ',n);
+ document.getElementById('chargeAmount').value='';
+ alert(yen(n)+'をチャージしました');show('home');
+}
+function sendMoney(){
+ const name=document.getElementById('recipient').value.trim();
+ const n=amount('sendAmount');
+ if(!name){alert('相手の名前を入力してください');return;}
+ if(n===null)return;
+ if(n>state.balance){alert('残高が足りません');return;}
+ state.balance-=n;record('送金：'+name,-n);
+ document.getElementById('sendAmount').value='';
+ document.getElementById('recipient').value='';
+ alert('デモ送金が完了しました');show('home');
+}
+function payMoney(){
+ const shop=document.getElementById('shop').value.trim();
+ const n=amount('payAmount');
+ if(!shop){alert('お店の名前を入力してください');return;}
+ if(n===null)return;
+ if(n>state.balance){alert('残高が足りません');return;}
+ state.balance-=n;record('支払い：'+shop,-n);
+ document.getElementById('payAmount').value='';
+ document.getElementById('shop').value='';
+ alert('デモ支払いが完了しました');show('home');
+}
+function makeItem(h){
+ const row=document.createElement('div');row.className='item';
+ const left=document.createElement('span');const right=document.createElement('span');
+ left.textContent=h.title+' · '+h.date;
+ right.textContent=(h.amount>0?'+':'')+yen(h.amount);
+ right.className=h.amount>0?'plus':'minus';
+ row.append(left,right);return row;
+}
+function render(){
+ document.getElementById('balance').textContent=yen(state.balance);
+ const recent=document.getElementById('recent');
+ const history=document.getElementById('historyList');
+ recent.replaceChildren();history.replaceChildren();
+ if(!state.history.length){
+  recent.textContent='まだ取引はありません';
+  history.textContent='取引履歴はありません';return;
+ }
+ state.history.slice(0,5).forEach(h=>recent.append(makeItem(h)));
+ state.history.forEach(h=>history.append(makeItem(h)));
+}
+function show(id){
+ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));
+ window.scrollTo(0,0);
+}
+function resetDemo(){
+ if(!confirm('残高と履歴を初期化しますか？'))return;
+ state={balance:100000,history:[]};save();render();show('home');
+}
+load();render();
+</script>
+</body>
+</html>
